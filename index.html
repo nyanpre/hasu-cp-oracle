@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <title>蓮ノ空聖書正典</title>
+    <script>
+        // URLパラメータ(?p=...)からペア名を取得
+        const urlParams = new URLSearchParams(window.location.search);
+        const pair = urlParams.get('p') || 'default';
+        
+        // 画像URLとアプリURLの設定
+        const imgUrl = `https://huggingface.co/spaces/Nyanpre/cp-oracle-dev/resolve/main/assets/ogp/${pair}.png`;
+        const appUrl = "https://huggingface.co/spaces/Nyanpre/cp-oracle-dev";
+
+        // SNS用メタタグを書き込む
+        document.write(`<meta property="og:title" content="本日の神託は【${pair}】です">`);
+        document.write(`<meta property="og:image" content="${imgUrl}">`);
+        document.write(`<meta name="twitter:card" content="summary_large_image">`);
+        document.write(`<meta property="og:description" content="日付が変わるまであなたの思想は統一されます。">`);
+
+        // 人間がアクセスした場合はアプリへ自動転送
+        window.location.href = appUrl;
+    </script>
+    <noscript>
+        <meta http-equiv="refresh" content="0;URL=https://huggingface.co/spaces/Nyanpre/cp-oracle-dev">
+    </noscript>
+</head>
+<body>
+    神託を確認中...
+</body>
+</html>
