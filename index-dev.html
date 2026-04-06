@@ -5,120 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>蓮ノ空聖書正典 (Dev)</title>
     <style>
-        body {
-            background-color: white; color: black; font-family: 'Helvetica Neue', Arial, sans-serif;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            min-height: 100vh; margin: 0; text-align: center;
-        }
+        body { background: white; color: black; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; }
         .container { max-width: 600px; padding: 20px; }
-        h1 { font-size: 32px; margin-bottom: 0; }
-        .subtitle { font-size: 1.2em; font-weight: bold; margin-bottom: 30px; }
-        #oracle-box {
-            display: none; border: 4px solid black; padding: 30px; margin: 20px 0;
-            background: white; min-width: 300px;
-        }
-        .oracle-label { font-size: 24px; margin-bottom: 10px; }
+        #oracle-box { display: none; border: 4px solid black; padding: 30px; margin: 20px 0; }
         .pair-name { font-size: 52px; font-weight: 900; letter-spacing: 2px; }
-        .peace-msg { color: #d63031; font-weight: bold; font-size: 1.2em; margin-top: 20px; }
-        .btn {
-            background: white; border: 2px solid black; padding: 15px 30px;
-            font-size: 20px; font-weight: bold; cursor: pointer; margin: 10px;
-            width: 280px; transition: 0.2s;
-        }
-        .btn:hover { background: #eee; }
-        .btn-primary { background: black; color: white; height: 70px; font-size: 24px; }
+        .btn { background: black; color: white; border: none; padding: 15px 30px; font-size: 24px; font-weight: bold; cursor: pointer; }
+        .btn:disabled { background: #ccc; }
         .share-area { display: none; margin-top: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>⚖️ 蓮ノ空聖書正典</h1>
-        <p class="subtitle">日付が変わるまであなたの思想は<br>統一されます。</p>
-
-        <button id="draw-btn" class="btn btn-primary" onclick="getOracle()">神託を受ける</button>
+        <button id="draw-btn" class="btn" onclick="getOracle()">神託を受ける</button>
 
         <div id="oracle-box">
-            <div class="oracle-label">本日の神託</div>
+            <div style="font-size: 24px;">本日の神託</div>
             <div id="pair-display" class="pair-name"></div>
-            <div class="peace-msg">これにより、不毛なカップリング論争は終結しました。</div>
+            <p>これにより、不毛なカップリング論争は終結しました。</p>
         </div>
 
         <div id="share-area" class="share-area">
-            <button class="btn" onclick="shareSNS('bsky')">Blueskyで信仰を広める</button><br>
-            <button class="btn" onclick="shareSNS('x')">Xで信仰を広める</button>
+            <button onclick="shareSNS('x')" style="padding:10px;">Xでシェア</button>
         </div>
     </div>
 
     <script>
         const HF_URL = "https://nyanpre-cp-oracle-dev.hf.space"; 
-        const GITHUB_URL = window.location.origin + window.location.pathname.split('/').slice(0, -1).join('/') + '/';
         let currentPair = "";
 
-        // この名前が HTML の onclick="getOracle()" と対応します
         async function getOracle() {
-            console.log("Starting getOracle..."); // ログ出力
             const btn = document.getElementById('draw-btn');
             btn.innerText = "交信中...";
             btn.disabled = true;
 
             try {
-                let deviceId = localStorage.getItem('cp_oracle_device_id');
-                if(!deviceId) {
-                    deviceId = Math.random().toString(36).substring(2, 15);
-                    localStorage.setItem('cp_oracle_device_id', deviceId);
-                }
+                let deviceId = localStorage.getItem('cp_oracle_device_id') || Math.random().toString(36).substring(2);
+                localStorage.setItem('cp_oracle_device_id', deviceId);
 
-                // 1. 実行リクエスト (POST)
-                const response = await fetch(`${HF_URL}/call/get_oracle`, {
+                // 1. 実行予約
+                const res = await fetch(`${HF_URL}/call/get_oracle`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ data: [deviceId] })
                 });
+                const { event_id } = await res.json();
 
-                if (!response.ok) throw new Error('POST request failed');
-                const { event_id } = await response.json();
+                // 2. 結果取得
+                const poll = await fetch(`${HF_URL}/call/get_oracle/${event_id}`);
+                const text = await poll.text();
+                const dataLine = text.split('\n').find(l => l.startsWith('data: '));
+                const resultData = JSON.parse(dataLine.substring(6));
 
-                // 2. 結果取得 (GET)
-                const resultResponse = await fetch(`${HF_URL}/call/get_oracle/${event_id}`);
-                const resultText = await resultResponse.text();
-                
-                const lines = resultText.split('\n');
-                let resultData = null;
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        resultData = JSON.parse(line.substring(6));
-                        break;
-                    }
-                }
-
-                if (!resultData) throw new Error("No data received from HF");
-
-                const htmlString = resultData[0];
-                const match = htmlString.match(/letter-spacing: 2px;'>([^<]+)<\/div>/);
+                // ペア名を抽出 ( <div...>ペア名</div> )
+                const match = resultData[0].match(/>([^<]+)</);
                 currentPair = match ? match[1] : "運命";
 
                 document.getElementById('pair-display').innerText = currentPair;
                 document.getElementById('oracle-box').style.display = 'block';
                 document.getElementById('share-area').style.display = 'block';
                 btn.style.display = 'none';
-
             } catch (e) {
-                console.error("Critical Error:", e);
-                alert("神との交信に失敗しました。詳細はコンソールを確認してください。");
-                btn.innerText = "神託を受ける";
+                console.error(e);
+                alert("交信失敗。Hugging FaceがRunningか確認してください。");
+                btn.innerText = "再試行";
                 btn.disabled = false;
             }
         }
 
-        function shareSNS(platform) {
-            const shareUrl = `${GITHUB_URL}${encodeURIComponent(currentPair)}.html`;
-            const text = `私は「${currentPair}」を信仰しています。\n\n蓮ノ空聖書正典：\n${shareUrl}`;
-            
-            if (platform === 'bsky') {
-                window.open(`https://bsky.app/intent/compose?text=${encodeURIComponent(text)}`, '_blank');
-            } else {
-                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
-            }
+        function shareSNS(p) {
+            const url = `https://rairaff8-source.github.io/hasu-cp-ogp/${encodeURIComponent(currentPair)}.html`;
+            const text = `私は「${currentPair}」を信仰しています。\n\n蓮ノ空聖書正典：\n${url}`;
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
         }
     </script>
 </body>
