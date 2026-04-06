@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>蓮ノ空聖書正典</title>
+    <title>蓮ノ空聖書正典 (Dev)</title>
     <meta property="og:type" content="website">
     <meta property="og:title" content="蓮ノ空聖書正典">
     <meta property="og:description" content="日付が変わるまであなたの思想は統一されます。">
@@ -56,9 +56,12 @@
             <button class="btn" onclick="shareSNS('x')">Xで信仰を広める</button>
         </div>
     </div>
-<script>
+
+    <script>
+        // --- 設定 ---
         const HF_URL = "https://nyanpre-cp-oracle-dev.hf.space"; 
-        const GITHUB_URL = window.location.origin + window.location.pathname.replace('index-dev.html', '');
+        // 転送先URLから index-dev.html を除いたベースURLを取得
+        const GITHUB_URL = window.location.origin + window.location.pathname.split('/').slice(0, -1).join('/') + '/';
         let currentPair = "";
 
         async function getOracle() {
@@ -67,26 +70,28 @@
             btn.disabled = true;
 
             try {
-                let deviceId = localStorage.getItem('cp_oracle_device_id') || Math.random().toString(36).substring(2, 15);
-                localStorage.setItem('cp_oracle_device_id', deviceId);
+                // Device IDの取得/生成
+                let deviceId = localStorage.getItem('cp_oracle_device_id');
+                if(!deviceId) {
+                    deviceId = Math.random().toString(36).substring(2, 15);
+                    localStorage.setItem('cp_oracle_device_id', deviceId);
+                }
 
-                // --- Gradio 6 最新のAPI呼び出し方式 ---
-                // 1. 実行リクエストを送る
+                // 1. 実行リクエスト (POST)
                 const response = await fetch(`${HF_URL}/call/get_oracle`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ data: [deviceId] })
                 });
 
-                if (!response.ok) throw new Error('リクエストに失敗しました');
-                
+                if (!response.ok) throw new Error('Network response was not ok');
                 const { event_id } = await response.json();
 
-                // 2. 結果を取得する (Server-Sent Eventsからデータをパース)
+                // 2. 結果取得 (GET)
                 const resultResponse = await fetch(`${HF_URL}/call/get_oracle/${event_id}`);
                 const resultText = await resultResponse.text();
                 
-                // data: [...] という行を探して解析
+                // data: 行からJSONを抽出
                 const lines = resultText.split('\n');
                 let resultData = null;
                 for (const line of lines) {
@@ -96,29 +101,38 @@
                     }
                 }
 
-                if (!resultData) throw new Error("神託データが見つかりません");
+                if (!resultData) throw new Error("No data received");
 
-                // ペア名の抽出
+                // oracle_html からペア名を抽出
                 const htmlString = resultData[0];
                 const match = htmlString.match(/letter-spacing: 2px;'>([^<]+)<\/div>/);
                 currentPair = match ? match[1] : "運命";
 
-                // 表示更新
+                // 画面表示の更新
                 document.getElementById('pair-display').innerText = currentPair;
                 document.getElementById('oracle-box').style.display = 'block';
                 document.getElementById('share-area').style.display = 'block';
                 btn.style.display = 'none';
 
             } catch (e) {
-                console.error("Error details:", e);
-                alert("神との交信に失敗しました。Hugging FaceのStatusを確認してください。");
+                console.error("Detailed Error:", e);
+                alert("神との交信に失敗しました。Hugging FaceのStatusがRunningか確認してください。");
                 btn.innerText = "神託を受ける";
                 btn.disabled = false;
             }
         }
 
-        // shareSNS 関数はそのまま（変更なし）
-        function shareSNS(platform) { ... }
+        function shareSNS(platform) {
+            // 個別の .html ファイルへのパスを生成
+            const shareUrl = `${GITHUB_URL}${encodeURIComponent(currentPair)}.html`;
+            const text = `私は「${currentPair}」を信仰しています。\n\n蓮ノ空聖書正典：\n${shareUrl}`;
+            
+            if (platform === 'bsky') {
+                window.open(`https://bsky.app/intent/compose?text=${encodeURIComponent(text)}`, '_blank');
+            } else {
+                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+            }
+        }
     </script>
 </body>
 </html>
