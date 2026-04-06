@@ -26,12 +26,13 @@
         </div>
 
         <div id="share-area" class="share-area">
-            <button onclick="shareSNS('x')" style="padding:10px;">Xでシェア</button>
+            <button onclick="shareSNS()" style="padding:10px; cursor:pointer;">Xで信仰を広める</button>
         </div>
     </div>
 
     <script>
-        const HF_URL = "https://nyanpre-cp-oracle-dev.hf.space"; 
+        // 構成情報に基づき、/gradio_api を追加
+        const HF_URL = "https://nyanpre-cp-oracle-dev.hf.space/gradio_api"; 
         let currentPair = "";
 
         async function getOracle() {
@@ -43,21 +44,27 @@
                 let deviceId = localStorage.getItem('cp_oracle_device_id') || Math.random().toString(36).substring(2);
                 localStorage.setItem('cp_oracle_device_id', deviceId);
 
-                // 1. 実行予約
+                // 1. 実行リクエスト (POST /call/get_oracle)
                 const res = await fetch(`${HF_URL}/call/get_oracle`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ data: [deviceId] })
                 });
+                
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                 const { event_id } = await res.json();
 
-                // 2. 結果取得
+                // 2. 結果取得 (GET /call/get_oracle/{event_id})
                 const poll = await fetch(`${HF_URL}/call/get_oracle/${event_id}`);
                 const text = await poll.text();
+                
+                // SSE形式のレスポンスからデータを抽出
                 const dataLine = text.split('\n').find(l => l.startsWith('data: '));
+                if (!dataLine) throw new Error("No data line found");
+                
                 const resultData = JSON.parse(dataLine.substring(6));
 
-                // ペア名を抽出 ( <div...>ペア名</div> )
+                // HTMLからペア名を抽出
                 const match = resultData[0].match(/>([^<]+)</);
                 currentPair = match ? match[1] : "運命";
 
@@ -66,14 +73,14 @@
                 document.getElementById('share-area').style.display = 'block';
                 btn.style.display = 'none';
             } catch (e) {
-                console.error(e);
-                alert("交信失敗。Hugging FaceがRunningか確認してください。");
+                console.error("Critical Error:", e);
+                alert("神との交信に失敗しました。Hugging FaceのStatusとPublic設定を確認してください。");
                 btn.innerText = "再試行";
                 btn.disabled = false;
             }
         }
 
-        function shareSNS(p) {
+        function shareSNS() {
             const url = `https://rairaff8-source.github.io/hasu-cp-ogp/${encodeURIComponent(currentPair)}.html`;
             const text = `私は「${currentPair}」を信仰しています。\n\n蓮ノ空聖書正典：\n${url}`;
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
