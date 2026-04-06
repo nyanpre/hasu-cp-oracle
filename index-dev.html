@@ -56,12 +56,14 @@
             <button class="btn" onclick="shareSNS('x')">Xで信仰を広める</button>
         </div>
     </div>
-
-    <script>
+<script>
         // --- 設定 ---
-        const HF_URL = "https://nyanpre-cp-oracle-dev.hf.space"; // 例: https://nyanpre-cp-oracle-dev.hf.space
-        const GITHUB_URL = window.location.origin + window.location.pathname;
+        const HF_URL = "https://nyanpre-cp-oracle-dev.hf.space"; 
+        const GITHUB_URL = window.location.origin + window.location.pathname.replace('index-dev.html', '');
         let currentPair = "";
+
+        // セッション用のランダム文字列生成
+        const session_hash = Math.random().toString(36).substring(2);
 
         async function getOracle() {
             const btn = document.getElementById('draw-btn');
@@ -76,20 +78,25 @@
                     localStorage.setItem('cp_oracle_device_id', deviceId);
                 }
 
-                // Hugging Face APIを叩く
-                const response = await fetch(`${HF_URL}/run/predict`, {
+                // --- 修正ポイント: エンドポイントを /api/predict に変更 ---
+                const response = await fetch(`${HF_URL}/api/predict`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         data: [deviceId],
-                        event_data: null,
-                        fn_index: 0 // Python側の get_personal_daily_oracle のインデックス
+                        session_hash: session_hash, // セッションハッシュを追加
+                        fn_index: 0
                     })
                 });
 
+                if (!response.ok) throw new Error('Network response was not ok');
+
                 const json = await response.json();
-                // json.data[0] に HTML文字列が入っているので、正規表現でペア名だけ抽出
-                const match = json.data[0].match(/letter-spacing: 2px;'>([^<]+)<\/div>/);
+                
+                // --- 修正ポイント: Gradioのレスポンス形式に合わせて抽出 ---
+                // Pythonの return の1番目 (oracle_html) を取得
+                const htmlString = json.data[0]; 
+                const match = htmlString.match(/letter-spacing: 2px;'>([^<]+)<\/div>/);
                 currentPair = match ? match[1] : "運命";
 
                 // 画面表示
@@ -99,14 +106,15 @@
                 btn.style.display = 'none';
 
             } catch (e) {
-                console.error(e);
-                alert("神との交信に失敗しました。時間をおいて修行し直してください。");
+                console.error("Error details:", e);
+                alert("神との交信に失敗しました。Hugging Faceが起動中か確認してください。");
                 btn.innerText = "神託を受ける";
                 btn.disabled = false;
             }
         }
 
         function shareSNS(platform) {
+            // index-dev.html を消して ペア名.html に繋ぐ
             const shareUrl = `${GITHUB_URL}${encodeURIComponent(currentPair)}.html`;
             const text = `私は「${currentPair}」を信仰しています。\n\n蓮ノ空聖書正典：\n${shareUrl}`;
             
