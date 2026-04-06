@@ -57,13 +57,9 @@
         </div>
     </div>
 <script>
-        // --- 設定 ---
         const HF_URL = "https://nyanpre-cp-oracle-dev.hf.space"; 
         const GITHUB_URL = window.location.origin + window.location.pathname.replace('index-dev.html', '');
         let currentPair = "";
-
-        // セッション用のランダム文字列生成
-        const session_hash = Math.random().toString(36).substring(2);
 
         async function getOracle() {
             const btn = document.getElementById('draw-btn');
@@ -71,35 +67,42 @@
             btn.disabled = true;
 
             try {
-                // Device IDの取得/生成
                 let deviceId = localStorage.getItem('cp_oracle_device_id');
                 if(!deviceId) {
                     deviceId = Math.random().toString(36).substring(2, 15);
                     localStorage.setItem('cp_oracle_device_id', deviceId);
                 }
 
-                // --- 修正ポイント: エンドポイントを /api/predict に変更 ---
-                const response = await fetch(`${HF_URL}/api/predict`, {
+                // --- 最新のGradio API呼び出し形式 ---
+                // 1. 実行をリクエスト
+                const response = await fetch(`${HF_URL}/call/get_oracle`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        data: [deviceId],
-                        session_hash: session_hash, // セッションハッシュを追加
-                        fn_index: 0
-                    })
+                    body: JSON.stringify({ data: [deviceId] })
                 });
+                const { event_id } = await response.json();
 
-                if (!response.ok) throw new Error('Network response was not ok');
-
-                const json = await response.json();
+                // 2. 結果を取得 (Server-Sent Events)
+                const resultResponse = await fetch(`${HF_URL}/call/get_oracle/${event_id}`);
+                const resultText = await resultResponse.text();
                 
-                // --- 修正ポイント: Gradioのレスポンス形式に合わせて抽出 ---
-                // Pythonの return の1番目 (oracle_html) を取得
-                const htmlString = json.data[0]; 
+                // データのパース（Gradioの特殊な形式から抽出）
+                const lines = resultText.split('\n');
+                let resultData = null;
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        resultData = JSON.parse(line.substring(6));
+                        break;
+                    }
+                }
+
+                if (!resultData) throw new Error("No data received");
+
+                // resultData[0] に oracle_html が入っています
+                const htmlString = resultData[0];
                 const match = htmlString.match(/letter-spacing: 2px;'>([^<]+)<\/div>/);
                 currentPair = match ? match[1] : "運命";
 
-                // 画面表示
                 document.getElementById('pair-display').innerText = currentPair;
                 document.getElementById('oracle-box').style.display = 'block';
                 document.getElementById('share-area').style.display = 'block';
@@ -107,17 +110,15 @@
 
             } catch (e) {
                 console.error("Error details:", e);
-                alert("神との交信に失敗しました。Hugging Faceが起動中か確認してください。");
+                alert("神との交信に失敗しました。F12キーでコンソールログを確認してください。");
                 btn.innerText = "神託を受ける";
                 btn.disabled = false;
             }
         }
 
         function shareSNS(platform) {
-            // index-dev.html を消して ペア名.html に繋ぐ
             const shareUrl = `${GITHUB_URL}${encodeURIComponent(currentPair)}.html`;
             const text = `私は「${currentPair}」を信仰しています。\n\n蓮ノ空聖書正典：\n${shareUrl}`;
-            
             if (platform === 'bsky') {
                 window.open(`https://bsky.app/intent/compose?text=${encodeURIComponent(text)}`, '_blank');
             } else {
