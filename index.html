@@ -10,29 +10,35 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta property="og:image" content="https://huggingface.co/spaces/Nyanpre/cp-oracle/resolve/main/assets/ogp/default.png">
-
-    <script>
-        // 2. URLパラメータ(?p=...)からペア名を取得
+    
+<script>
         const urlParams = new URLSearchParams(window.location.search);
         const pair = urlParams.get('p');
         
-        // 【修正】自動転送先を直通URLに変更
-        const appUrl = "https://nyanpre-cp-oracle.hf.space";
-
-        // 3. パラメータがある場合のみ、OGPを動的に上書き
-        if (pair && pair !== 'default') {
-            const imgUrl = `https://huggingface.co/spaces/Nyanpre/cp-oracle/resolve/main/assets/ogp/${pair}.png`;
-            
-            document.write(`<meta property="og:title" content="本日の神託は【${pair}】です">`);
-            document.write(`<meta property="og:image" content="${imgUrl}">`);
-            // 【修正】動的なOGPのURLも直通URL（パラメータ付き）に変更
-            document.write(`<meta property="og:url" content="https://nyanpre-cp-oracle.hf.space?p=${encodeURIComponent(pair)}">`);
+        // 直通URL（パラメータも引き継ぐ）
+        let targetUrl = "https://nyanpre-cp-oracle.hf.space";
+        if (pair) {
+            targetUrl += "?p=" + encodeURIComponent(pair);
         }
 
-        // 4. 人間がアクセスした場合はアプリへ自動転送
-        window.location.href = appUrl;
-    </script>
+        // 3. OGPの動的書き換え（クローラー用）
+        if (pair && pair !== 'default') {
+            const imgUrl = `https://huggingface.co/spaces/Nyanpre/cp-oracle/resolve/main/assets/ogp/${pair}.png`;
+            document.write(`<meta property="og:title" content="本日の神託は【${pair}】です">`);
+            document.write(`<meta property="og:image" content="${imgUrl}">`);
+            document.write(`<meta property="og:url" content="${targetUrl}">`);
+        }
 
+        // 4. 強制転送（replaceを使用し、履歴に残さないことで戻り現象を防ぐ）
+        // さらに top.location を使うことで、もしフレームに入れられそうになっても
+        // 最上位のウィンドウを直通URLに書き換えます。
+        if (window.top !== window.self) {
+            window.top.location.replace(targetUrl);
+        } else {
+            window.location.replace(targetUrl);
+        }
+    </script>
+    
     <noscript>
         <meta http-equiv="refresh" content="0;URL=https://nyanpre-cp-oracle.hf.space">
     </noscript>
