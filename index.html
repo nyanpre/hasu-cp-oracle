@@ -16,10 +16,10 @@
         const urlParams = new URLSearchParams(window.location.search);
         const pair = urlParams.get('p');
         
-        // アプリ本体のURL
-        const appUrl = "https://huggingface.co/spaces/Nyanpre/cp-oracle";
+        // 【修正箇所1】アプリ本体のURLを「直通URL」に変更
+        const appUrl = "https://nyanpre-cp-oracle.hf.space";
 
-        // 3. パラメータがある場合のみ、OGPを動的に上書き（一部のクローラーやブラウザ用）
+        // 3. パラメータがある場合のみ、OGPを動的に上書き
         if (pair && pair !== 'default') {
             const imgUrl = `https://huggingface.co/spaces/Nyanpre/cp-oracle/resolve/main/assets/ogp/${pair}.png`;
             
@@ -28,15 +28,14 @@
         }
 
         // 4. 人間がアクセスした場合はアプリへ自動転送
-        // OGPクローラーに読み込む時間を与えるため、ほんの少しだけ遅延させることも可能ですが、基本は即時でOKです
         window.location.href = appUrl;
     </script>
 
     <noscript>
-        <meta http-equiv="refresh" content="0;URL=https://huggingface.co/spaces/Nyanpre/cp-oracle">
+        <meta http-equiv="refresh" content="0;URL=https://nyanpre-cp-oracle.hf.space">
     </noscript>
 </head>
 <body>
-    <p>神託を確認中... 画面が切り替わらない場合は<a href="https://huggingface.co/spaces/Nyanpre/cp-oracle">こちら</a>をクリックしてください。</p>
+    <p>神託を確認中... 画面が切り替わらない場合は<a href="https://nyanpre-cp-oracle.hf.space">こちら</a>をクリックしてください。</p>
 </body>
 </html>
