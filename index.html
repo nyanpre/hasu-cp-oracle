@@ -12,24 +12,12 @@
     <meta property="og:image" content="https://huggingface.co/spaces/Nyanpre/cp-oracle/resolve/main/assets/ogp/default.png">
 
     <script>
-        // 2. URLパラメータ(?p=...)からペア名を取得
-        const urlParams = new URLSearchParams(window.location.search);
-        const pair = urlParams.get('p');
-        
-        // アプリ本体のURL
-        const appUrl = "https://huggingface.co/spaces/Nyanpre/cp-oracle";
+        // 現在のURLパラメータ(?p=...)をそのまま保持してHugging Faceへ転送
+        const currentParams = window.location.search;
+        const appUrl = "https://huggingface.co/spaces/Nyanpre/cp-oracle" + currentParams;
 
-        // 3. パラメータがある場合のみ、OGPを動的に上書き（一部のクローラーやブラウザ用）
-        if (pair && pair !== 'default') {
-            const imgUrl = `https://huggingface.co/spaces/Nyanpre/cp-oracle/resolve/main/assets/ogp/${pair}.png`;
-            
-            document.write(`<meta property="og:title" content="本日の神託は【${pair}】です">`);
-            document.write(`<meta property="og:image" content="${imgUrl}">`);
-        }
-
-        // 4. 人間がアクセスした場合はアプリへ自動転送
-        // OGPクローラーに読み込む時間を与えるため、ほんの少しだけ遅延させることも可能ですが、基本は即時でOKです
-        window.location.href = appUrl;
+        // 即時転送
+        window.location.replace(appUrl);
     </script>
 
     <noscript>
@@ -37,6 +25,6 @@
     </noscript>
 </head>
 <body>
-    <p>神託を確認中... 画面が切り替わらない場合は<a href="https://huggingface.co/spaces/Nyanpre/cp-oracle">こちら</a>をクリックしてください。</p>
+    <p>神託を確認中... 画面が切り替わらない場合は<a href="https://huggingface.co/spaces/Nyanpre/cp-oracle">こちら</a></p>
 </body>
 </html>
